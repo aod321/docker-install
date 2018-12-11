@@ -261,33 +261,21 @@ do_install() {
 
 		cat >&2 <<-'EOF'
 			Warning: the "docker" command appears to already exist on this system.
-
-			If you already have Docker installed, this script can cause trouble, which is
-			why we're displaying this warning and provide the opportunity to cancel the
-			installation.
-
-			If you installed the current Docker package using this script and are using it
 		EOF
 
 		if [ $shouldWarn -eq 1 ]; then
 			cat >&2 <<-'EOF'
-			again to update Docker, we urge you to migrate your image store before upgrading
-			to v1.10+.
-
-			You can find instructions for this here:
-			https://github.com/docker/docker/wiki/Engine-v1.10.0-content-addressability-migration
 			EOF
 		else
 			cat >&2 <<-'EOF'
-			again to update Docker, you can safely ignore this message.
 			EOF
 		fi
 
 		cat >&2 <<-'EOF'
 
-			You may press Ctrl+C now to abort this script.
+			Docker is already installed.
 		EOF
-		( set -x; sleep 20 )
+		( set -x; exit 1)
 	fi
 
 	user="$(id -un 2>/dev/null || true)"
