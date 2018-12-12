@@ -500,6 +500,13 @@ if [ "$user" != 'root' ]; then
        exit 1
      fi
 fi
+set_mirror(){
+$sh_c "echo '{' > /etc/docker/daemon.json"
+$sh_c "echo  '\t\"registry-mirrors\": [\"https://docker.mirrors.ustc.edu.cn/\"]' >> /etc/docker/daemon.json"
+$sh_c "echo  '}' >> /etc/docker/daemon.json"
+$sh_c "systemctl restart docker"
+}
+
 if [ ! -n "$1" ] ;then
     echo "[Tanway ML16ROS Warning]This script is need param to decide what to do,plase run with params: 'init' or 'run'"
 fi 
@@ -509,6 +516,7 @@ while [ $# -gt 0 ]; do
                    if ! command_exists docker; then
 		        do_install
 		    fi
+                    set_mirror    
 		    $sh_c "docker run -it  --name="tanway_ml16ros"\
 			    -p 5600:5600/udp \
 			    --user="tanway" \
@@ -522,6 +530,6 @@ while [ $# -gt 0 ]; do
 			$sh_c "docker exec -it tanway_ml16ros /bin/bash"
 		    ;;
         esac
-        #shift $(( $# > 0 ? 1 : 0 ))
+        shift $(( $# > 0 ? 1 : 0 ))
 done
 
