@@ -1,6 +1,6 @@
 #!/bin/bash
 if [ $1x == "init"x ]; then
-    curl -fsSL https://raw.githubusercontent.com/aod321/docker-install/master/install.sh -o install.sh
+    wget https://raw.githubusercontent.com/aod321/docker-install/master/install.sh
     sh install.sh --mirror
     docker run -it  --name="tanway_ml16ros"\
     -p 5600:5600/udp \
