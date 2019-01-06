@@ -1,96 +1,74 @@
-SHELL:=/bin/bash
-DISTROS:=centos-7 fedora-28 fedora-29 debian-jessie debian-stretch debian-buster ubuntu-trusty ubuntu-xenial ubuntu-yakkety ubuntu-artful
-VERIFY_INSTALL_DISTROS:=$(addprefix x86_64-verify-install-,$(DISTROS))
-CHANNEL_TO_TEST?=test
-VERSION?=
-SHELLCHECK_EXCLUSIONS=$(addprefix -e, SC1091 SC1117)
-SHELLCHECK=docker run --rm -v "$(CURDIR)":/v -w /v koalaman/shellcheck $(SHELLCHECK_EXCLUSIONS)
+#
+# Copyright (C) 2009-2014 OpenWrt.org
+#
+# This is free software, licensed under the GNU General Public License v2.
+# See /LICENSE for more information.
+#
 
-.PHONY: shellcheck
-shellcheck:
-	$(SHELLCHECK) install.sh
+include $(TOPDIR)/rules.mk
 
-.PHONY: check
-check: $(VERIFY_INSTALL_DISTROS)
+PKG_NAME:=libsodium
+PKG_VERSION:=1.0.11
+PKG_RELEASE:=1
 
-.PHONY: clean
-clean:
-	$(RM) *-verify-install-*
-	$(RM) -r build
+PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
+PKG_SOURCE_URL:=https://download.libsodium.org/libsodium/releases/old/unsupported
+PKG_MD5SUM:=b58928d035064b2a46fb564937b83540
+PKG_FIXUP:=libtool autoreconf
+PKG_USE_MIPS16:=0
+PKG_INSTALL:=1
 
-x86_64-verify-install-%:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		$(subst -,:,$*) \
-		/v/verify-docker-install | tee $@
+PKG_MAINTAINER:=Damiano Renfer <damiano.renfer@gmail.com>
+PKG_LICENSE:=ISC
 
-armhf-verify-install-raspbian-jessie:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		resin/rpi-raspbian:jessie \
-		/v/verify-docker-install | tee $@
+include $(INCLUDE_DIR)/package.mk
 
-armhf-verify-install-raspbian-stretch:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		resin/rpi-raspbian:stretch \
-		/v/verify-docker-install | tee $@
+define Package/libsodium
+  SECTION:=libs
+  CATEGORY:=Libraries
+  TITLE:=P(ortable|ackageable) NaCl-based crypto library
+  URL:=https://github.com/jedisct1/libsodium
+  MAINTAINER:=Damiano Renfer <damiano.renfer@gmail.com>
+endef
 
-armhf-verify-install-%:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		arm32v7/$(subst -,:,$*) \
-		/v/verify-docker-install | tee $@
+define Package/libsodium/description
+  NaCl (pronounced "salt") is a new easy-to-use high-speed software library for network communication, encryption, decryption, signatures, etc.
+  NaCl's goal is to provide all of the core operations needed to build higher-level cryptographic tools.
+  Sodium is a portable, cross-compilable, installable, packageable fork of NaCl (based on the latest released upstream version nacl-20110221), with a compatible API.
+  The design choices, particularly in regard to the Curve25519 Diffie-Hellman function, emphasize security (whereas NIST curves emphasize "performance" at the cost of security), and "magic constants" in NaCl/Sodium have clear rationales.
+  The same cannot be said of NIST curves, where the specific origins of certain constants are not described by the standards.
+  And despite the emphasis on higher security, primitives are faster across-the-board than most implementations of the NIST standards.
+endef
 
-aarch64-verify-install-%:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		arm64v8/$(subst -,:,$*) \
-		/v/verify-docker-install | tee $@
+define Package/libsodium/config
+menu "Configuration"
+	depends on PACKAGE_libsodium
+	config LIBSODIUM_MINIMAL
+		bool "Compile only what is required for the high-level API (no aes128ctr), should be fine in most cases."
+		default y
+endmenu
+endef
 
-s390x-verify-install-%:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		s390x/$(subst -,:,$*) \
-		/v/verify-docker-install | tee $@
+CONFIGURE_ARGS+= \
+	--disable-ssp \
+	--disable-asm \
+	--enable-minimal \
+	--without-pthreads\
+	$(if $(CONFIG_LIBSODIUM_MINIMAL),--enable-minimal=yes,--enable-minimal=no)
 
-ppc64le-verify-install-%:
-	mkdir -p build
-	sed 's/DEFAULT_CHANNEL_VALUE="test"/DEFAULT_CHANNEL_VALUE="$(CHANNEL_TO_TEST)"/' install.sh > build/install.sh
-	set -o pipefail && docker run \
-		--rm \
-		-e VERSION \
-		-v $(CURDIR):/v \
-		-w /v \
-		ppc64le/$(subst -,:,$*) \
-		/v/verify-docker-install | tee $@
+define Build/InstallDev
+	$(INSTALL_DIR) $(1)/usr/include/sodium
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/sodium.h $(1)/usr/include
+	$(CP) $(PKG_INSTALL_DIR)/usr/include/sodium/*.h $(1)/usr/include/sodium
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsodium.{a,so*} $(1)/usr/lib
+	$(INSTALL_DIR) $(1)/usr/lib/pkgconfig
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/pkgconfig/libsodium.pc $(1)/usr/lib/pkgconfig/
+endef
+
+define Package/libsodium/install
+	$(INSTALL_DIR) $(1)/usr/lib
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libsodium.so.* $(1)/usr/lib/
+endef
+
+$(eval $(call BuildPackage,libsodium))
